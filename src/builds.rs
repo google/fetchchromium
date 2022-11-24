@@ -72,5 +72,5 @@ pub(crate) fn get_download_uri(
     let prefix = format_prefix(specification, &format!("{}", version.0));
     let prefix = url_escape::encode_component(&prefix);
     let generation = &version.1;
-    format!("https://www.googleapis.com/download/storage/v1/b/chromium-browser-asan/o/{prefix}.zip&alt=media&generation={generation}")
+    format!("https://www.googleapis.com/download/storage/v1/b/chromium-browser-asan/o/{prefix}.zip?alt=media&generation={generation}")
 }
