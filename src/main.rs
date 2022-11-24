@@ -1,48 +1,86 @@
-use std::cmp::max;
+mod builds;
+mod releases;
 
+use anyhow::anyhow;
 use anyhow::Result;
+use builds::BuildSpecification;
+use builds::Generation;
 use indexmap::IndexMap;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-const URI: &str = "https://chromiumdash.appspot.com/fetch_releases";
-const BUCKET: &str = "https://commondatastorage.googleapis.com/chromium-browser-asan/";
-
-// [{"channel":"Canary","chromium_main_branch_position":1075413,"hashes":{"angle":"541cdcbf094fd900f085d14cb896f11240393f0c","chromium":"b91adbb57872336e657aed3e4997b736a312246e","dawn":"f9c6633006e84f697996fb72e570114576cc32c3","devtools":"aeb2dc95cce6b337892a9315f2304d8862dc3cf3","pdfium":"76cec9aed8e2293f955f87b68bc7563bae5e6a8f","skia":"3744490336cf54f6a167643a8e40298cd6ce2756","v8":"acf8224030a79d87470640caced05e2a4abae976","webrtc":"46e2d103b4edc76b65a8e71a5de372c213cfb5c3"},"milestone":110,"platform":"Android","previous_version":"110.0.5436.0","time":1669280114778,"version":"110.0.5437.0"}
-
-use serde::Deserialize;
-
-#[derive(Deserialize, Debug)]
-struct Release {
-    chromium_main_branch_position: u64,
-    channel: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Content {
-    #[serde(rename = "Key")]
-    key: String
-}
-
-#[derive(Deserialize, Debug)]
-struct ListBucketResult {
-    #[serde(rename = "Contents")]
-    contents: Vec<Content>
-}
+use crate::builds::get_download_uri;
 
 fn main() -> Result<()> {
-    println!("Fetching release information");
-    // let response = reqwest::blocking::get(URI)?;
-    // let releases: Vec<Release> = serde_json::from_reader(response)?;
-    // let mut channels: IndexMap<String, u64> = IndexMap::new();
-    // for release in releases.into_iter() {
-    //     let branch_pos = release.chromium_main_branch_position;
-    //     channels
-    //         .entry(release.channel)
-    //         .and_modify(|existing| *existing = max(*existing, branch_pos))
-    //         .or_insert(branch_pos);
-    // }
-    // println!("Latest branch positions: {:?}", channels);
-    let response = reqwest::blocking::get(BUCKET)?;
-    let bucket_result: ListBucketResult = serde_xml_rs::from_reader(response).unwrap();
-    println!("Builds found: {:?}", bucket_result.contents);
+    let os = std::env::consts::OS;
+    let platform = match os {
+        "macos" => "mac",
+        "windows" => "win64",
+        _ => os,
+    };
+
+    let specification = BuildSpecification {
+        build_type: "asan",
+        platform,
+        debugness: "release",
+    };
+
+    println!("Fetching branch information");
+    let channels = releases::get_channel_branch_positions()?;
+    // Sometimes several channels can relate to the same branch, especially
+    // for stable & extended stable. Aggregate them.
+    let mut downloads: IndexMap<u64, Vec<String>> = IndexMap::new();
+    for channel in channels.into_iter() {
+        let desc = format!("{}-{}", channel.0, channel.1.milestone);
+        downloads
+            .entry(channel.1.chromium_main_branch_position)
+            .and_modify(|v| v.push(desc.clone()))
+            .or_insert(vec![desc]);
+    }
+    println!(
+        "Downloads we need to do: {:?}. Investigating available builds.",
+        downloads
+    );
+
+    let results: Vec<Result<()>> = downloads
+        .into_par_iter()
+        .map(|(branch_point, channel_description)| {
+            // Find the build immediately before the branch point.
+            let build = find_a_build_just_before(&specification, branch_point)?;
+            let uri = get_download_uri(&specification, &build);
+            println!(
+                "Channel {:?}: branch point was {}, downloading build {:?} from {}",
+                channel_description, branch_point, build, uri
+            );
+            Ok(())
+        })
+        .collect();
+    println!("Any errors: {:?}", results);
+
     Ok(())
+}
+
+fn find_a_build_just_before(
+    specification: &BuildSpecification,
+    branch_point: u64,
+) -> Result<(u64, Generation)> {
+    // The build listing takes a version prefix, which we want to be as precise as possible,
+    // to be quick and because there's a maximum result count. We'll take it digit by digit
+    // and keep searching outwards until we find one which is at or below the intended branch
+    // point.
+    let branch_point_string = format!("{}", branch_point);
+
+    for prefix_length in (0..branch_point_string.len()).rev() {
+        if let Ok(builds) =
+            builds::get_builds(specification, &branch_point_string[0..prefix_length])
+        {
+            let the_build = builds
+                .into_iter()
+                .filter(|build| build.0 <= branch_point)
+                .max_by_key(|build| build.0);
+            if let Some(the_build) = the_build {
+                return Ok(the_build);
+            }
+        }
+    }
+    Err(anyhow!("No matching builds found"))
 }

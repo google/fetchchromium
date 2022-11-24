@@ -1,4 +1,7 @@
+use std::fmt::Display;
+
 use anyhow::Result;
+use indexmap::IndexMap;
 use serde::Deserialize;
 
 const BUCKET: &str = "https://commondatastorage.googleapis.com/chromium-browser-asan/";
@@ -7,6 +10,17 @@ const BUCKET: &str = "https://commondatastorage.googleapis.com/chromium-browser-
 struct Content {
     #[serde(rename = "Key")]
     key: String,
+    #[serde(rename = "Generation")]
+    generation: String,
+}
+
+#[derive(Debug)]
+pub(crate) struct Generation(String);
+
+impl Display for Generation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -31,7 +45,7 @@ pub(crate) fn format_prefix(specification: &BuildSpecification, version: &str) -
 pub(crate) fn get_builds(
     specification: &BuildSpecification,
     version_prefix: &str,
-) -> Result<Vec<u64>> {
+) -> Result<IndexMap<u64, Generation>> {
     let prefix = format_prefix(specification, version_prefix);
     let uri = format!("{BUCKET}?prefix={prefix}");
     let response = reqwest::blocking::get(uri)?;
@@ -43,13 +57,20 @@ pub(crate) fn get_builds(
         .filter_map(|content| {
             let build_label = content.key;
             let version_slice = &build_label[prefix_to_remove..build_label.len() - 4];
-            version_slice.parse::<u64>().ok()
+            version_slice
+                .parse::<u64>()
+                .ok()
+                .map(|ver| (ver, Generation(content.generation)))
         })
         .collect())
 }
 
-pub(crate) fn get_download_uri(specification: &BuildSpecification, version: u64) -> String {
-    let prefix = format_prefix(specification, &format!("{}", version));
+pub(crate) fn get_download_uri(
+    specification: &BuildSpecification,
+    version: &(u64, Generation),
+) -> String {
+    let prefix = format_prefix(specification, &format!("{}", version.0));
     let prefix = url_escape::encode_component(&prefix);
-    format!("https://www.googleapis.com/download/storage/v1/b/chromium-browser-asan/o/{prefix}.zip&alt=media")
+    let generation = &version.1;
+    format!("https://www.googleapis.com/download/storage/v1/b/chromium-browser-asan/o/{prefix}.zip&alt=media&generation={generation}")
 }
