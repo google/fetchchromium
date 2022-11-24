@@ -1,12 +1,15 @@
 mod builds;
 mod releases;
 
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use anyhow::Result;
 use builds::BuildSpecification;
 use builds::Generation;
 use indexmap::IndexMap;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use ripunzip::UnzipOptions;
 
 use crate::builds::get_download_uri;
 
@@ -41,22 +44,43 @@ fn main() -> Result<()> {
         downloads
     );
 
-    let results: Vec<Result<()>> = downloads
+    let errors: Vec<_> = downloads
         .into_par_iter()
         .map(|(branch_point, channel_description)| {
-            // Find the build immediately before the branch point.
-            let build = find_a_build_just_before(&specification, branch_point)?;
-            let uri = get_download_uri(&specification, &build);
-            println!(
-                "Channel {:?}: branch point was {}, downloading build {:?} from {}",
-                channel_description, branch_point, build, uri
-            );
-            Ok(())
+            fetch_build(&specification, branch_point, &channel_description)
         })
+        .filter_map(Result::err)
         .collect();
-    println!("Any errors: {:?}", results);
 
-    Ok(())
+    // Output any errors we found on any file
+    for error in &errors {
+        eprintln!("Error: {}", error)
+    }
+    // Return the first error code, if any.
+    errors.into_iter().next().map(Result::Err).unwrap_or(Ok(()))
+}
+
+fn fetch_build(
+    specification: &BuildSpecification,
+    branch_point: u64,
+    channel_descriptions: &[String],
+) -> Result<()> {
+    // Find the build immediately before the branch point.
+    let build = find_a_build_just_before(specification, branch_point)?;
+    let uri = get_download_uri(specification, &build);
+    println!(
+        "Channel {:?}: branch point was {}, downloading build {:?} from {}",
+        channel_descriptions, branch_point, build, uri
+    );
+    let concatenated_descriptions = channel_descriptions.join("_");
+    let result = ripunzip::unzip_uri(
+        &uri,
+        &UnzipOptions {
+            output_directory: Some(PathBuf::from(concatenated_descriptions)),
+        },
+    );
+    println!("Completed download from {}.", uri);
+    result
 }
 
 fn find_a_build_just_before(
