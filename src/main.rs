@@ -16,7 +16,9 @@ use anyhow::Result;
 use builds::BuildSpecification;
 use builds::Generation;
 use indexmap::IndexMap;
+use indicatif::ProgressBar;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use ripunzip::NullProgressReporter;
 use ripunzip::UnzipOptions;
 
 use crate::builds::get_download_uri;
@@ -52,6 +54,8 @@ fn main() -> Result<()> {
         downloads
     );
 
+    let mut progress_bar = ProgressBar::new(0);
+
     let errors: Vec<_> = downloads
         .into_par_iter()
         .map(|(branch_point, channel_description)| {
@@ -81,14 +85,19 @@ fn fetch_build(
         channel_descriptions, branch_point, build, uri
     );
     let concatenated_descriptions = channel_descriptions.join("_");
-    let result = ripunzip::unzip_uri(
+    let mut unzip_engine = ripunzip::UnzipEngine::for_uri(
         &uri,
-        &UnzipOptions {
+        UnzipOptions {
             output_directory: Some(PathBuf::from(concatenated_descriptions)),
+            single_threaded: false,
         },
-    );
+        None,
+        NullProgressReporter,
+        || {},
+    )?;
+    unzip_engine.unzip()?;
     println!("Completed download from {}.", uri);
-    result
+    Ok(())
 }
 
 fn find_a_build_just_before(
