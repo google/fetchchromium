@@ -15,6 +15,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.66"
+clap = "4.0.29"
+env_logger = "0.10.0"
 indexmap = { version = "1.9.2", features = ["rayon"] }
 indicatif = "0.17.2"
 itertools = "0.10.5"

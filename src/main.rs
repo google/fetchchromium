@@ -9,18 +9,70 @@
 mod builds;
 mod releases;
 
+use std::fmt::Display;
 use std::fmt::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use builds::BuildSpecification;
+use clap::Parser;
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use ripunzip::{UnzipOptions, UnzipProgressReporter};
 
 use crate::builds::get_download_uri;
+
+#[derive(Parser, Debug, Clone)]
+enum Mode {
+    /// Release mode.
+    Release,
+    /// Debug mode.
+    Debug,
+}
+
+impl Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Release => write!(f, "release"),
+            Self::Debug => write!(f, "debug"),
+        }
+    }
+}
+
+impl FromStr for Mode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_ascii_lowercase().as_str() {
+            "release" => Ok(Self::Release),
+            "debug" => Ok(Self::Debug),
+            _ => Err("need either 'release' or 'debug'".to_string()),
+        }
+    }
+}
+
+/// Fetch Chromium builds suitable for reproducing security bugs.
+/// This tool will fetch builds appropriate for all release channels
+/// by default.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// The output directory into which to place the files. By default, the
+    /// current working directory is used.
+    #[arg(short, long, value_name = "DIRECTORY")]
+    output_directory: Option<PathBuf>,
+
+    /// The build type (asan, ubsan etc.)
+    #[arg(short, long, default_value = "asan")]
+    variant: String,
+
+    /// The debug vs release variant
+    #[arg(short, long, default_value_t=Mode::Release)]
+    mode: Mode,
+}
 
 fn main() -> Result<()> {
     let os = std::env::consts::OS;
@@ -30,10 +82,14 @@ fn main() -> Result<()> {
         _ => os,
     };
 
+    env_logger::init();
+    let args = Args::parse();
+    let debugness = args.mode.to_string();
+
     let specification = BuildSpecification {
-        build_type: "asan",
+        build_type: &args.variant,
         platform,
-        debugness: "release",
+        debugness: &debugness,
     };
 
     println!("Fetching branch information");
@@ -63,6 +119,7 @@ fn main() -> Result<()> {
         .into_par_iter()
         .map(|(branch_point, channel_description)| {
             fetch_build(
+                &args.output_directory,
                 &specification,
                 branch_point,
                 &channel_description,
@@ -93,6 +150,7 @@ impl<'a> UnzipProgressReporter for BumpProgress<'a> {
 }
 
 fn fetch_build(
+    output_directory: &Option<PathBuf>,
     specification: &BuildSpecification,
     branch_point: u64,
     channel_descriptions: &[String],
@@ -106,10 +164,14 @@ fn fetch_build(
         channel_descriptions, branch_point, build, uri
     );
     let concatenated_descriptions = channel_descriptions.join("_");
+    let output_directory = Some(match output_directory.as_ref() {
+        None => PathBuf::from(concatenated_descriptions),
+        Some(root) => root.join(concatenated_descriptions),
+    });
     let unzip_engine = ripunzip::UnzipEngine::for_uri(
         &uri,
         UnzipOptions {
-            output_directory: Some(PathBuf::from(concatenated_descriptions)),
+            output_directory,
             single_threaded: false,
         },
         None,
