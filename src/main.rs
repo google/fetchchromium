@@ -9,16 +9,16 @@
 mod builds;
 mod releases;
 
+use std::fmt::Write;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use builds::BuildSpecification;
 use indexmap::IndexMap;
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use ripunzip::NullProgressReporter;
-use ripunzip::UnzipOptions;
+use ripunzip::{UnzipOptions, UnzipProgressReporter};
 
 use crate::builds::get_download_uri;
 
@@ -53,12 +53,21 @@ fn main() -> Result<()> {
         downloads
     );
 
-    let mut progress_bar = ProgressBar::new(0);
+    let progress_bar = ProgressBar::new(0);
+    progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})\n{msg}")
+        .unwrap()
+        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+        .progress_chars("#-"));
 
     let errors: Vec<_> = downloads
         .into_par_iter()
         .map(|(branch_point, channel_description)| {
-            fetch_build(&specification, branch_point, &channel_description)
+            fetch_build(
+                &specification,
+                branch_point,
+                &channel_description,
+                BumpProgress(&progress_bar),
+            )
         })
         .filter_map(Result::err)
         .collect();
@@ -71,10 +80,23 @@ fn main() -> Result<()> {
     errors.into_iter().next().map(Result::Err).unwrap_or(Ok(()))
 }
 
+struct BumpProgress<'a>(&'a ProgressBar);
+
+impl<'a> UnzipProgressReporter for BumpProgress<'a> {
+    fn total_bytes_expected(&self, expected: u64) {
+        self.0.inc_length(expected)
+    }
+
+    fn bytes_extracted(&self, count: u64) {
+        self.0.inc(count)
+    }
+}
+
 fn fetch_build(
     specification: &BuildSpecification,
     branch_point: u64,
     channel_descriptions: &[String],
+    progress: impl UnzipProgressReporter,
 ) -> Result<()> {
     // Find the build immediately before the branch point.
     let build = find_a_build_just_before(specification, branch_point)?;
@@ -91,7 +113,7 @@ fn fetch_build(
             single_threaded: false,
         },
         None,
-        NullProgressReporter,
+        progress,
         || {},
     )?;
     unzip_engine.unzip()?;
