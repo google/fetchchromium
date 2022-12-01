@@ -9,10 +9,8 @@
 mod builds;
 mod releases;
 
-use std::fmt::Display;
 use std::fmt::Write;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -25,33 +23,13 @@ use ripunzip::{UnzipOptions, UnzipProgressReporter};
 
 use crate::builds::get_download_uri;
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "snake_case")]
 enum Mode {
     /// Release mode.
     Release,
     /// Debug mode.
     Debug,
-}
-
-impl Display for Mode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Release => write!(f, "release"),
-            Self::Debug => write!(f, "debug"),
-        }
-    }
-}
-
-impl FromStr for Mode {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_ascii_lowercase().as_str() {
-            "release" => Ok(Self::Release),
-            "debug" => Ok(Self::Debug),
-            _ => Err("need either 'release' or 'debug'".to_string()),
-        }
-    }
 }
 
 /// Fetch Chromium builds suitable for reproducing security bugs.

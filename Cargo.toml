@@ -26,4 +26,5 @@ ripunzip = { path = "../ripunzip" }
 serde = { version = "1.0.147", features = ["derive"] }
 serde-xml-rs = "0.6.0"
 serde_json = "1.0.89"
+strum = { version = "0.24.1", features = ["derive"] }
 url-escape = "0.1.1"
