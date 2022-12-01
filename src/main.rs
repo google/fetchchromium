@@ -14,7 +14,6 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Result;
 use builds::BuildSpecification;
-use builds::Generation;
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -79,13 +78,13 @@ fn fetch_build(
 ) -> Result<()> {
     // Find the build immediately before the branch point.
     let build = find_a_build_just_before(specification, branch_point)?;
-    let uri = get_download_uri(specification, &build);
+    let uri = get_download_uri(specification, build);
     println!(
         "Channel {:?}: branch point was {}, downloading build {:?} from {}",
         channel_descriptions, branch_point, build, uri
     );
     let concatenated_descriptions = channel_descriptions.join("_");
-    let mut unzip_engine = ripunzip::UnzipEngine::for_uri(
+    let unzip_engine = ripunzip::UnzipEngine::for_uri(
         &uri,
         UnzipOptions {
             output_directory: Some(PathBuf::from(concatenated_descriptions)),
@@ -100,10 +99,7 @@ fn fetch_build(
     Ok(())
 }
 
-fn find_a_build_just_before(
-    specification: &BuildSpecification,
-    branch_point: u64,
-) -> Result<(u64, Generation)> {
+fn find_a_build_just_before(specification: &BuildSpecification, branch_point: u64) -> Result<u64> {
     // The build listing takes a version prefix, which we want to be as precise as possible,
     // to be quick and because there's a maximum result count. We'll take it digit by digit
     // and keep searching outwards until we find one which is at or below the intended branch
@@ -116,8 +112,8 @@ fn find_a_build_just_before(
         {
             let the_build = builds
                 .into_iter()
-                .filter(|build| build.0 <= branch_point)
-                .max_by_key(|build| build.0);
+                .filter(|build| *build <= branch_point)
+                .max();
             if let Some(the_build) = the_build {
                 return Ok(the_build);
             }
