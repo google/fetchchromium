@@ -10,6 +10,10 @@
 name = "fetchchromium"
 version = "0.1.0"
 edition = "2021"
+authors = ["Adrian Taylor <adetaylor@chromium.org>"]
+license = "MIT OR Apache-2.0"
+description = "A tool to fetch Chromium builds rapidly"
+repository = "https://github.com/google/fetchchromium"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,7 +26,7 @@ indicatif = "0.17.2"
 itertools = "0.10.5"
 rayon = "1.6.0"
 reqwest = { version = "0.11.13", features = ["blocking"] }
-ripunzip = { path = "../ripunzip" }
+ripunzip = "0.2.0"
 serde = { version = "1.0.147", features = ["derive"] }
 serde-xml-rs = "0.6.0"
 serde_json = "1.0.89"
