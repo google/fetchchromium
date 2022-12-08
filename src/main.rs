@@ -54,10 +54,10 @@ struct Args {
 
 fn main() -> Result<()> {
     let os = std::env::consts::OS;
-    let platform = match os {
-        "macos" => "mac",
-        "windows" => "win64",
-        _ => os,
+    let (platform, bitness_suffix) = match os {
+        "macos" => ("mac", None),
+        "windows" => ("win32", Some("_x64")),
+        _ => (os, None),
     };
 
     env_logger::init();
@@ -68,6 +68,7 @@ fn main() -> Result<()> {
         build_type: &args.variant,
         platform,
         debugness: &debugness,
+        bitness_suffix,
     };
 
     println!("Fetching branch information");
@@ -181,5 +182,9 @@ fn find_a_build_just_before(specification: &BuildSpecification, branch_point: u6
             }
         }
     }
-    Err(anyhow!("No matching builds found"))
+    Err(anyhow!(
+        "No matching builds found for {:?} at branch point {}",
+        specification,
+        branch_point_string
+    ))
 }

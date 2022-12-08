@@ -24,17 +24,22 @@ struct ListBucketResult {
     contents: Vec<Content>,
 }
 
+#[derive(Debug)]
 pub(crate) struct BuildSpecification<'a> {
     pub(crate) build_type: &'a str,
     pub(crate) platform: &'a str,
     pub(crate) debugness: &'a str,
+    pub(crate) bitness_suffix: Option<&'a str>,
 }
 
 pub(crate) fn format_prefix(specification: &BuildSpecification, version: &str) -> String {
     let build_type = specification.build_type;
     let platform = specification.platform;
     let debugness = specification.debugness;
-    format!("{platform}-{debugness}/{build_type}-{platform}-{debugness}-{version}")
+    let bitness = specification.bitness_suffix.unwrap_or("");
+    format!(
+        "{platform}-{debugness}{bitness}/{build_type}-{platform}-{debugness}{bitness}-{version}"
+    )
 }
 
 pub(crate) fn get_builds(
@@ -43,6 +48,7 @@ pub(crate) fn get_builds(
 ) -> Result<IndexSet<u64>> {
     let prefix = format_prefix(specification, version_prefix);
     let uri = format!("{BUCKET}?prefix={prefix}");
+    eprintln!("URI is {}", uri);
     let response = reqwest::blocking::get(uri)?;
     let bucket_result: ListBucketResult = serde_xml_rs::from_reader(response)?;
     let prefix_to_remove = format_prefix(specification, "").len();
