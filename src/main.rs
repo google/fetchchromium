@@ -50,6 +50,10 @@ struct Args {
     /// The debug vs release variant
     #[arg(short, long, default_value_t=Mode::Release)]
     mode: Mode,
+
+    /// Fetch a specific revision instead of all of the main branches
+    #[arg(short, long)]
+    revision: Option<u64>,
 }
 
 fn main() -> Result<()> {
@@ -71,17 +75,21 @@ fn main() -> Result<()> {
         bitness_suffix,
     };
 
-    println!("Fetching branch information");
-    let channels = releases::get_channel_branch_positions()?;
-    // Sometimes several channels can relate to the same branch, especially
-    // for stable & extended stable. Aggregate them.
     let mut downloads: IndexMap<u64, Vec<String>> = IndexMap::new();
-    for channel in channels.into_iter() {
-        let desc = format!("{}-{}", channel.0, channel.1.milestone);
-        downloads
-            .entry(channel.1.chromium_main_branch_position)
-            .and_modify(|v| v.push(desc.clone()))
-            .or_insert(vec![desc]);
+    if let Some(revision) = args.revision {
+        downloads.insert(revision, vec![format!("revision-{}", revision)]);
+    } else {
+        println!("Fetching branch information");
+        let channels = releases::get_channel_branch_positions()?;
+        // Sometimes several channels can relate to the same branch, especially
+        // for stable & extended stable. Aggregate them.
+        for channel in channels.into_iter() {
+            let desc = format!("{}-{}", channel.0, channel.1.milestone);
+            downloads
+                .entry(channel.1.chromium_main_branch_position)
+                .and_modify(|v| v.push(desc.clone()))
+                .or_insert(vec![desc]);
+        }
     }
     println!(
         "Downloads we need to do: {:?}. Investigating available builds.",
