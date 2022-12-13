@@ -9,6 +9,7 @@
 mod builds;
 mod releases;
 
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::path::PathBuf;
 
@@ -51,8 +52,12 @@ struct Args {
     #[arg(short, long, default_value_t=Mode::Release)]
     mode: Mode,
 
-    /// Fetch a specific revision instead of all of the main branches
+    /// Fetch just some of the channels (stable/extended/dev/canary/beta)
     #[arg(short, long)]
+    channel: Option<Vec<String>>,
+
+    /// Fetch a specific revision instead of all of the main branches
+    #[arg(short, long, conflicts_with = "channel")]
     revision: Option<u64>,
 }
 
@@ -80,7 +85,14 @@ fn main() -> Result<()> {
         downloads.insert(revision, vec![format!("revision-{}", revision)]);
     } else {
         println!("Fetching branch information");
-        let channels = releases::get_channel_branch_positions()?;
+        let mut channels = releases::get_channel_branch_positions()?;
+        if let Some(channels_wanted) = args.channel {
+            let channels_wanted: HashSet<String> = channels_wanted
+                .into_iter()
+                .map(|c| c.to_lowercase())
+                .collect();
+            channels.retain(|k, _| channels_wanted.contains(&k.to_lowercase()));
+        }
         // Sometimes several channels can relate to the same branch, especially
         // for stable & extended stable. Aggregate them.
         for channel in channels.into_iter() {
