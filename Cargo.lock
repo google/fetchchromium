@@ -1076,9 +1076,9 @@ dependencies = [
 
 [[package]]
 name = "ripunzip"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c233b55fa8e1da0e69f7103472931d7d9c7f5be537a7c1bb159a8a8d3ed6612"
+checksum = "d29aeed994154744c5e0a293bee4dcbaf81c0f47075c794c1b7cda479eaf821f"
 dependencies = [
  "anyhow",
  "clap",
