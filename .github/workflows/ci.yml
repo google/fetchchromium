@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule: [cron: "40 1 * * *"]
+  workflow_dispatch:
+
+env:
+  RUST_BACKTRACE: short
+  # CI builds don't benefit very much from this and it has bugs
+  CARGO_INCREMENTAL: 0
+  # We can't use a debugger in CI, and this makes builds faster and the cache
+  # smaller. (TODO: use -Cdebuginfo=0 if it doesn't make backtraces useless)
+  RUSTFLAGS: -Cdebuginfo=1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test ${{matrix.name || format('Rust {0}', matrix.rust)}}
+    runs-on: ${{matrix.os || 'ubuntu'}}-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - rust: nightly
+          - rust: beta
+          - rust: stable
+          - name: macOS
+            rust: nightly
+            os: macos
+          - name: Windows (msvc)
+            rust: nightly-x86_64-pc-windows-msvc
+            os: windows
+            flags: /EHsc
+    env:
+      CXXFLAGS: ${{matrix.flags}}
+      RUSTFLAGS: --cfg deny_warnings -Dwarnings
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+          components: rustfmt
+      # The `{ sharedKey: ... }` allows different actions to share the cache.
+      - uses: Swatinem/rust-cache@v1
+        with: { sharedKey: fullBuild }
+      # For operating systems that have it packaged, install creduce
+      - name: Install dependencies on Linux
+        if: matrix.os == ''
+        run: sudo apt-get install libssl-dev pkg-config
+      - run: cargo test --workspace ${{steps.testsuite.outputs.exclude}}
+
+  deb:
+    name: BuildDeb
+    runs-on: ubuntu-20.04
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hecrj/setup-rust-action@v1
+      - run: cargo install cargo-deb # sadly not supported by dtolnay/install
+      - name: BuildDeb
+        run: cargo deb
+      - name: Upload Deb Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: amd64deb
+          path: ./target/debian/*.deb
+
+  # Clippy check
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v1
+      - run: cargo clippy --workspace --tests -- -Dclippy::all
+
+  # Mention outdated dependencies
+  outdated:
+    name: Outdated
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/install@master
+        with:
+          crate: cargo-outdated
+      - run: cargo outdated -R -w
+
+  # Check rustfmt is good
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
