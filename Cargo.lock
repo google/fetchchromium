@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "fetchchromium"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -965,6 +965,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "progress-streams"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e965d96c8162c607b0cd8d66047ad3c9fd35273c134d994327882c6e47f986a7"
+
+[[package]]
 name = "quote"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1076,9 +1082,9 @@ dependencies = [
 
 [[package]]
 name = "ripunzip"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d29aeed994154744c5e0a293bee4dcbaf81c0f47075c794c1b7cda479eaf821f"
+checksum = "7625f7bbbc8e84629dbfe29defe8a1a5f4bab47be2cbb33fba485599fabbf264"
 dependencies = [
  "anyhow",
  "clap",
@@ -1087,6 +1093,7 @@ dependencies = [
  "itertools",
  "log",
  "monitor",
+ "progress-streams",
  "rayon",
  "reqwest",
  "tempfile",
