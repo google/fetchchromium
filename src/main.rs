@@ -19,6 +19,7 @@ use builds::BuildSpecification;
 use clap::Parser;
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use ripunzip::{UnzipOptions, UnzipProgressReporter};
 
@@ -34,7 +35,7 @@ enum Mode {
 }
 
 /// Fetch Chromium builds suitable for reproducing security bugs.
-/// This tool will fetch builds appropriate for all release channels
+/// This tool will fetch builds for the oldest and newest release channel
 /// by default.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -51,6 +52,11 @@ struct Args {
     /// The debug vs release variant
     #[arg(short, long, default_value_t=Mode::Release)]
     mode: Mode,
+
+    /// Fetch all release channels (stable/extended/dev/canary/beta)
+    /// instead of, as by default, just the oldest and newest.
+    #[arg(short, long, conflicts_with = "channel", conflicts_with = "revision")]
+    all_channels: bool,
 
     /// Fetch just some of the channels (stable/extended/dev/canary/beta)
     #[arg(short, long)]
@@ -86,12 +92,35 @@ fn main() -> Result<()> {
     } else {
         println!("Fetching branch information");
         let mut channels = releases::get_channel_branch_positions()?;
+        // Sometimes there are milestones in between, e.g. canary might be
+        // 112 but dev might be 114. From the JSON endpoint we use, we have
+        // no means to find out their branch position - this might be something
+        // we want to look into in future.
         if let Some(channels_wanted) = args.channel {
             let channels_wanted: HashSet<String> = channels_wanted
                 .into_iter()
                 .map(|c| c.to_lowercase())
                 .collect();
             channels.retain(|k, _| channels_wanted.contains(&k.to_lowercase()));
+        } else if !args.all_channels {
+            // By default, filter to the oldest and newest channel only.
+            let oldest_branch_point = channels
+                .values()
+                .map(|ci| ci.chromium_main_branch_position)
+                .min();
+            let youngest_branch_point = channels
+                .values()
+                .map(|ci| ci.chromium_main_branch_position)
+                .max();
+            let branch_points_wanted: HashSet<_> = oldest_branch_point
+                .into_iter()
+                .chain(youngest_branch_point.into_iter())
+                .collect();
+            channels.retain(|_, v| branch_points_wanted.contains(&v.chromium_main_branch_position));
+            println!(
+                "Because -a was not specified, fetching only the oldest/newest branch points - {}",
+                channels.iter().map(|(_, c)| c.milestone).join(", ")
+            );
         }
         // Sometimes several channels can relate to the same branch, especially
         // for stable & extended stable. Aggregate them.
