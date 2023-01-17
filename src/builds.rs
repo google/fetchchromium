@@ -48,7 +48,6 @@ pub(crate) fn get_builds(
 ) -> Result<IndexSet<u64>> {
     let prefix = format_prefix(specification, version_prefix);
     let uri = format!("{BUCKET}?prefix={prefix}");
-    eprintln!("URI is {}", uri);
     let response = reqwest::blocking::get(uri)?;
     let bucket_result: ListBucketResult = serde_xml_rs::from_reader(response)?;
     let prefix_to_remove = format_prefix(specification, "").len();
