@@ -63,7 +63,7 @@ pub(crate) fn get_builds(
 }
 
 pub(crate) fn get_download_uri(specification: &BuildSpecification, version: u64) -> String {
-    let prefix = format_prefix(specification, &format!("{}", version));
+    let prefix = format_prefix(specification, &format!("{version}"));
     let prefix = url_escape::encode_component(&prefix);
     format!("https://chromium-browser-asan.storage.googleapis.com/{prefix}.zip")
 }
