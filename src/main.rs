@@ -132,9 +132,7 @@ fn main() -> Result<()> {
                 .or_insert(vec![desc]);
         }
     }
-    println!(
-        "Downloads we need to do: {downloads:?}. Investigating available builds."
-    );
+    println!("Downloads we need to do: {downloads:?}. Investigating available builds.");
 
     let progress_bar = ProgressBar::new(0);
     progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})\n{msg}")
