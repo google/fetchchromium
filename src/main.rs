@@ -88,7 +88,7 @@ fn main() -> Result<()> {
 
     let mut downloads: IndexMap<u64, Vec<String>> = IndexMap::new();
     if let Some(revision) = args.revision {
-        downloads.insert(revision, vec![format!("revision-{}", revision)]);
+        downloads.insert(revision, vec![format!("revision-{revision}")]);
     } else {
         println!("Fetching branch information");
         let mut channels = releases::get_channel_branch_positions()?;
@@ -132,10 +132,7 @@ fn main() -> Result<()> {
                 .or_insert(vec![desc]);
         }
     }
-    println!(
-        "Downloads we need to do: {:?}. Investigating available builds.",
-        downloads
-    );
+    println!("Downloads we need to do: {downloads:?}. Investigating available builds.");
 
     let progress_bar = ProgressBar::new(0);
     progress_bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})\n{msg}")
@@ -159,7 +156,7 @@ fn main() -> Result<()> {
 
     // Output any errors we found on any file
     for error in &errors {
-        eprintln!("Error: {}", error)
+        eprintln!("Error: {error}")
     }
     // Return the first error code, if any.
     errors.into_iter().next().map(Result::Err).unwrap_or(Ok(()))
@@ -188,8 +185,7 @@ fn fetch_build(
     let build = find_a_build_just_before(specification, branch_point)?;
     let uri = get_download_uri(specification, build);
     println!(
-        "Channel {:?}: branch point was {}, downloading build {:?} from {}",
-        channel_descriptions, branch_point, build, uri
+        "Channel {channel_descriptions:?}: branch point was {branch_point}, downloading build {build:?} from {uri}"
     );
     let concatenated_descriptions = channel_descriptions.join("_");
     let output_directory = Some(match output_directory.as_ref() {
@@ -207,7 +203,7 @@ fn fetch_build(
         || {},
     )?;
     unzip_engine.unzip()?;
-    println!("Completed download from {}.", uri);
+    println!("Completed download from {uri}.");
     Ok(())
 }
 
@@ -216,7 +212,7 @@ fn find_a_build_just_before(specification: &BuildSpecification, branch_point: u6
     // to be quick and because there's a maximum result count. We'll take it digit by digit
     // and keep searching outwards until we find one which is at or below the intended branch
     // point.
-    let branch_point_string = format!("{}", branch_point);
+    let branch_point_string = format!("{branch_point}");
 
     for prefix_length in (0..branch_point_string.len()).rev() {
         if let Ok(builds) =
