@@ -114,7 +114,7 @@ fn main() -> Result<()> {
                 .max();
             let branch_points_wanted: HashSet<_> = oldest_branch_point
                 .into_iter()
-                .chain(youngest_branch_point.into_iter())
+                .chain(youngest_branch_point)
                 .collect();
             channels.retain(|_, v| branch_points_wanted.contains(&v.chromium_main_branch_position));
             println!(
