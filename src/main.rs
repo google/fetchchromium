@@ -7,6 +7,7 @@
 // except according to those terms.
 
 mod builds;
+mod chromium_filename_filter;
 mod releases;
 
 use std::collections::HashSet;
@@ -21,9 +22,11 @@ use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use itertools::Itertools;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use ripunzip::FilenameFilter;
 use ripunzip::{UnzipOptions, UnzipProgressReporter};
 
 use crate::builds::get_download_uri;
+use crate::chromium_filename_filter::ChromiumFilenameFilter;
 
 #[derive(Parser, Debug, Clone, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "snake_case")]
@@ -65,6 +68,11 @@ struct Args {
     /// Fetch a specific revision instead of all of the main branches
     #[arg(short, long, conflicts_with = "channel")]
     revision: Option<u64>,
+
+    /// Fetch the additional files from the zip which aren't typically required
+    /// to run Chrome.
+    #[arg(short, long)]
+    fetch_unnecessary_files: bool,
 }
 
 fn main() -> Result<()> {
@@ -149,6 +157,7 @@ fn main() -> Result<()> {
                 branch_point,
                 &channel_description,
                 BumpProgress(&progress_bar),
+                args.fetch_unnecessary_files,
             )
         })
         .filter_map(Result::err)
@@ -180,6 +189,7 @@ fn fetch_build(
     branch_point: u64,
     channel_descriptions: &[String],
     progress: impl UnzipProgressReporter,
+    fetch_unnecessary_files: bool,
 ) -> Result<()> {
     // Find the build immediately before the branch point.
     let build = find_a_build_just_before(specification, branch_point)?;
@@ -192,17 +202,18 @@ fn fetch_build(
         None => PathBuf::from(concatenated_descriptions),
         Some(root) => root.join(concatenated_descriptions),
     });
-    let unzip_engine = ripunzip::UnzipEngine::for_uri(
-        &uri,
-        UnzipOptions {
-            output_directory,
-            single_threaded: false,
-        },
-        None,
-        progress,
-        || {},
-    )?;
-    unzip_engine.unzip()?;
+    let filename_filter = if fetch_unnecessary_files {
+        None
+    } else {
+        Some(Box::new(ChromiumFilenameFilter) as Box<dyn FilenameFilter + Sync>)
+    };
+    let unzip_engine = ripunzip::UnzipEngine::for_uri(&uri, None, || {})?;
+    unzip_engine.unzip(UnzipOptions {
+        output_directory,
+        single_threaded: false,
+        filename_filter,
+        progress_reporter: Box::new(progress),
+    })?;
     println!("Completed download from {uri}.");
     Ok(())
 }
