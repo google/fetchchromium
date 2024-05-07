@@ -188,7 +188,7 @@ fn fetch_build(
     specification: &BuildSpecification,
     branch_point: u64,
     channel_descriptions: &[String],
-    progress: impl UnzipProgressReporter + Sync,
+    progress: impl UnzipProgressReporter,
     fetch_unnecessary_files: bool,
 ) -> Result<()> {
     // Find the build immediately before the branch point.
