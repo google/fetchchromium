@@ -13,6 +13,6 @@ sudo DEBIAN_FRONTEND=noninteractive apt --fix-broken --assume-yes install
 sudo DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes xfce4 llvm desktop-base dbus-x11 xscreensaver
 sudo bash -c 'echo "exec /etc/X11/Xsession /usr/bin/xfce4-session" > /etc/chrome-remote-desktop-session'
 
-echo Restarting the VM - please SSH in again, then run "fetchchromium" with whatever options you like (possibly none)
-echo and run the command given at https://remotedesktop.google.com/headless
+echo "Restarting the VM - please SSH in again, then run fetchchromium with whatever options you like (possibly none)"
+echo "and run the command given at https://remotedesktop.google.com/headless to set up CRD"
 sudo shutdown -r now
