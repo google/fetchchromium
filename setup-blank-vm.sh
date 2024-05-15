@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This script sets up a blank Ubuntu 22.04 VM for Chromium debugging.
+wget "https://raw.githubusercontent.com/chromium/chromium/main/tools/valgrind/asan/third_party/asan_symbolize.py"
 
 wget "https://github.com/google/fetchchromium/releases/download/v0.4.0/fetchchromium_0.4.0-1_amd64.deb"
 sudo dpkg -i fetchchromium_0.4.0-1_amd64.deb
