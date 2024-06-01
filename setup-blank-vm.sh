@@ -7,7 +7,7 @@ wget "https://github.com/google/fetchchromium/releases/download/v0.4.1/fetchchro
 sudo dpkg -i fetchchromium_0.4.1-1_amd64.deb
 rm fetchchromium_0.4.1-1_amd64.deb
 
-wget "https://github.com/google/ripunzip/releases/download/v1.2.1/ripunzip_1.2.2-1_amd64.deb"
+wget "https://github.com/google/ripunzip/releases/download/v1.2.2/ripunzip_1.2.2-1_amd64.deb"
 sudo dpkg -i ripunzip_1.2.2-1_amd64.deb
 rm ripunzip_1.2.2-1_amd64.deb
 
