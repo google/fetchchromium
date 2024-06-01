@@ -434,7 +434,7 @@ checksum = "9fc0510504f03c51ada170672ac806f1f105a88aa97a5281117e1ddc3368e51a"
 
 [[package]]
 name = "fetchchromium"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1153,9 +1153,9 @@ dependencies = [
 
 [[package]]
 name = "ripunzip"
-version = "1.2.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f846e51b72450afc9c29603c47b661c733cad4fc0c894e96f442ba97e1393b0"
+checksum = "e90dc34e5181142b98264032982a515382cd5a9b3ef95e900b3dbd6668d22a3e"
 dependencies = [
  "anyhow",
  "clap",
