@@ -3,13 +3,13 @@
 # This script sets up a blank Ubuntu 22.04 VM for Chromium debugging.
 wget "https://raw.githubusercontent.com/chromium/chromium/main/tools/valgrind/asan/third_party/asan_symbolize.py"
 
-wget "https://github.com/google/fetchchromium/releases/download/v0.4.0/fetchchromium_0.4.0-1_amd64.deb"
-sudo dpkg -i fetchchromium_0.4.0-1_amd64.deb
-rm fetchchromium_0.4.0-1_amd64.deb
+wget "https://github.com/google/fetchchromium/releases/download/v0.4.1/fetchchromium_0.4.1-1_amd64.deb"
+sudo dpkg -i fetchchromium_0.4.1-1_amd64.deb
+rm fetchchromium_0.4.1-1_amd64.deb
 
-wget "https://github.com/google/ripunzip/releases/download/v1.2.1/ripunzip_1.2.1-1_amd64.deb"
-sudo dpkg -i ripunzip_1.2.1-1_amd64.deb
-rm ripunzip_1.2.1-1_amd64.deb
+wget "https://github.com/google/ripunzip/releases/download/v1.2.1/ripunzip_1.2.2-1_amd64.deb"
+sudo dpkg -i ripunzip_1.2.2-1_amd64.deb
+rm ripunzip_1.2.2-1_amd64.deb
 
 # Hard coded because of a bug in some versions
 wget "https://deb.rug.nl/ppa/mirror/dl.google.com/linux/chrome-remote-desktop/deb/pool/main/c/chrome-remote-desktop/chrome-remote-desktop_125.0.6422.20_amd64.deb"
