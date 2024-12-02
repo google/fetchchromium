@@ -173,7 +173,7 @@ fn main() -> Result<()> {
 
 struct BumpProgress<'a>(&'a ProgressBar);
 
-impl<'a> UnzipProgressReporter for BumpProgress<'a> {
+impl UnzipProgressReporter for BumpProgress<'_> {
     fn total_bytes_expected(&self, expected: u64) {
         self.0.inc_length(expected)
     }
