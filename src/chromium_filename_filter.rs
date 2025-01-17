@@ -20,6 +20,7 @@ static PATTERNS: [&str; 10] = [
     "**/chrome_*_percent.pak",
     "**/nacl_helper",
     "**/Chromium.app/**",
+    "**/d8",
 ];
 
 /// Knows what files are typically necessary for running Chromium.
