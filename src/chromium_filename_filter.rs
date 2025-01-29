@@ -9,7 +9,7 @@
 use glob_match::glob_match;
 use ripunzip::FilenameFilter;
 
-static PATTERNS: [&str; 10] = [
+static PATTERNS: [&str; 11] = [
     "**/*.so",
     "**/chrome",
     "**/en-US.pak",
