@@ -8,7 +8,7 @@
 
 [package]
 name = "fetchchromium"
-version = "0.4.2"
+version = "0.4.5"
 edition = "2021"
 authors = ["Adrian Taylor <adetaylor@chromium.org>"]
 license = "MIT OR Apache-2.0"
