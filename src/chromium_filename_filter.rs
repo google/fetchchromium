@@ -9,7 +9,7 @@
 use glob_match::glob_match;
 use ripunzip::FilenameFilter;
 
-static PATTERNS: [&str; 11] = [
+static PATTERNS: [&str; 12] = [
     "**/*.so",
     "**/chrome",
     "**/en-US.pak",
@@ -21,6 +21,7 @@ static PATTERNS: [&str; 11] = [
     "**/nacl_helper",
     "**/Chromium.app/**",
     "**/d8",
+    "**/snapshot_blob.bin",
 ];
 
 /// Knows what files are typically necessary for running Chromium.
