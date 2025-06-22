@@ -14,8 +14,8 @@ use std::collections::HashSet;
 use std::fmt::Write;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use builds::BuildSpecification;
 use clap::Parser;
 use indexmap::IndexMap;
