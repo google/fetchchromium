@@ -41,7 +41,7 @@ jobs:
       RUSTFLAGS: --cfg deny_warnings -Dwarnings
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@master
@@ -63,7 +63,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
       - run: cargo install cargo-deb # sadly not supported by dtolnay/install
       - name: BuildDeb
@@ -81,7 +81,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
@@ -95,10 +95,15 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/install@master
-        with:
-          crate: cargo-outdated
+      - uses: actions/checkout@v4
+      # Use `binstall` instead of `dtolnay/install` since:
+      #   (a) `cargo-outdated` is sensitive to the version of Cargo it's
+      #       built *with*, in that it might not be able to deal with
+      #       `Cargo.toml` files with newer features.
+      #   (b) empirically, `dtolnay/install` doesn't rebuild packages with
+      #       new versions of Cargo as promptly.
+      - uses: cargo-bins/cargo-binstall@v1.14.1
+      - run: cargo binstall cargo-outdated
       - run: cargo outdated -R -w
 
   # Check rustfmt is good
@@ -106,7 +111,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           components: rustfmt
